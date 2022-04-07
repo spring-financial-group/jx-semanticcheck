@@ -15,7 +15,6 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"spring-financial-group/jx-semanticcheck/pkg/gits"
 	"strings"
 )
@@ -29,9 +28,10 @@ type Options struct {
 	CommandRunner cmdrunner.CommandRunner
 	JXClient      jxc.Interface
 
-	Namespace        string
-	CurrentRevision  string
-	PreviousRevision string
+	Namespace           string
+	LatestCommitSha     string
+	PreviousRevisionSha string
+	RepoDir             string
 }
 
 var (
@@ -58,8 +58,9 @@ func NewCmdCheckSemantics() (*cobra.Command, *Options) {
 		},
 	}
 	o.ScmFactory.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.PreviousRevision, "previous-rev", "p", "", "the previous tag revision")
-	cmd.Flags().StringVarP(&o.CurrentRevision, "rev", "", "", "the current tag revision")
+	cmd.Flags().StringVarP(&o.PreviousRevisionSha, "previous-rev", "p", "", "the previous tag revision")
+	cmd.Flags().StringVarP(&o.LatestCommitSha, "latest-sha", "", "", "the current tag revision")
+	cmd.Flags().StringVarP(&o.RepoDir, "repo-dir", "", "", "the directory of the git repository")
 
 	return cmd, o
 }
@@ -88,9 +89,26 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate")
 	}
 
-	dir := o.ScmFactory.Dir
+	dir := o.RepoDir
+	if dir == "" {
+		dir = o.ScmFactory.Dir
+	}
 
-	commits, err := GetCommitsSinceLastRevision(dir, o.git(), o.PreviousRevision, o.CurrentRevision)
+	if o.PreviousRevisionSha == "" {
+		o.PreviousRevisionSha, err = GetPreviousRevSha(o.git(), dir)
+		if err != nil {
+			return err
+		}
+	}
+
+	if o.LatestCommitSha == "" {
+		o.LatestCommitSha, err = gitclient.GetLatestCommitSha(o.git(), dir)
+		if err != nil {
+			return err
+		}
+	}
+
+	commits, err := chgit.FetchCommits(dir, o.PreviousRevisionSha, o.LatestCommitSha)
 	if err != nil {
 		return err
 	}
@@ -98,78 +116,58 @@ func (o *Options) Run() error {
 	commitSlice := *commits
 	if strings.HasPrefix(commitSlice[0].Message, "release ") {
 		// remove the release commit from the log
-		tmp := commitSlice[1:]
-		commits = &tmp
+		commitSlice = commitSlice[1:]
 	}
 
 	var semanticCounter int
 	for _, commit := range commitSlice {
 		if !IsCommitSemantic(commit.Message) {
-			log.Logger().Errorf("commit %s does not use Conventional Commits:\n%s\n", commit.Hash, commit.Message)
+			log.Logger().Infof("commit %s does not use Conventional Commits:\n%s\n", commit.Hash, commit.Message)
 			semanticCounter++
 		}
 	}
 	if semanticCounter > 0 {
-		return fmt.Errorf("%d commits did not follow Conventional Commits, please rebase and merge", semanticCounter+1)
+		return fmt.Errorf("%d commit(s) did not follow Conventional Commits, please rebase and merge", semanticCounter)
 	}
+	log.Logger().Infof("all commits follow Conventional Commits")
 	return nil
+}
+
+func GetPreviousRevSha(g gitclient.Interface, dir string) (string, error) {
+	previousRevSha, _, err := gits.GetCommitPointedToByPreviousTag(g, dir)
+	if err != nil {
+		return "", err
+	}
+	if previousRevSha == "" {
+		// let's assume we are the first release
+		previousRevSha, err = gits.GetFirstCommitSha(g, dir)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to find first commit after we found no previous releases")
+		}
+		if previousRevSha == "" {
+			return "", errors.Errorf("no previous commit version found so change diff unavailable")
+		}
+	}
+	return previousRevSha, nil
 }
 
 func IsCommitSemantic(commitMessage string) bool {
 	commitMessage = strings.TrimSpace(strings.ToLower(commitMessage))
-	for _, title := range ConventionalCommitTitles {
-		if strings.HasPrefix(commitMessage, title) {
-			return true
+	idx := strings.Index(commitMessage, ":")
+	if idx > 0 {
+		commitTitle := commitMessage[0:idx]
+		for _, semanticTitle := range ConventionalCommitTitles {
+			if strings.HasPrefix(commitTitle, semanticTitle) {
+				return true
+			}
 		}
 	}
 	return false
 }
 
-func GetCommitsSinceLastRevision(dir string, g gitclient.Interface, previousRevision string, currentRevision string) (*[]object.Commit, error) {
-	var err error
-	if previousRevision == "" {
-		previousRevision, _, err = gits.GetCommitPointedToByPreviousTag(g, dir)
-		if err != nil {
-			return nil, err
-		}
-		if previousRevision == "" {
-			// lets assume we are the first release
-			previousRevision, err = gits.GetFirstCommitSha(g, dir)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to find first commit after we found no previous releases")
-			}
-			if previousRevision == "" {
-				return nil, errors.Errorf("no previous commit version found so change diff unavailable")
-			}
-		}
-	}
-
-	if currentRevision == "" {
-		currentRevision, _, err = gits.GetCommitPointedToByLatestTag(g, dir)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	gitDir, gitConfDir, err := gitclient.FindGitConfigDir(dir)
-	if err != nil {
-		return nil, err
-	}
-	if gitDir == "" || gitConfDir == "" {
-		return nil, fmt.Errorf("no git directory could be found from dir %s", dir)
-	}
-
-	commits, err := chgit.FetchCommits(gitDir, previousRevision, currentRevision)
-	if err != nil {
-		return nil, err
-	}
-
-	return commits, nil
-}
-
 func (o *Options) git() gitclient.Interface {
 	if o.GitClient == nil {
-		o.GitClient = cli.NewCLIClient("", o.CommandRunner)
+		o.GitClient = cli.NewCLIClient("", cmdrunner.QuietCommandRunner)
 	}
 	return o.GitClient
 }
