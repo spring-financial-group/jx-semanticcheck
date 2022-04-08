@@ -3,13 +3,11 @@ package check
 import (
 	"fmt"
 	chgit "github.com/antham/chyle/chyle/git"
-	jxc "github.com/jenkins-x/jx-api/v4/pkg/client/clientset/versioned"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/gitclient/cli"
-	"github.com/jenkins-x/jx-helpers/v3/pkg/kube/jxclient"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/scmhelpers"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
@@ -25,7 +23,6 @@ type Options struct {
 	ScmFactory    scmhelpers.Options
 	GitClient     gitclient.Interface
 	CommandRunner cmdrunner.CommandRunner
-	JXClient      jxc.Interface
 
 	Namespace       string
 	LatestCommitSha string
@@ -77,10 +74,6 @@ func (o *Options) Validate() error {
 		return errors.Wrapf(err, "failed to discover git repository")
 	}
 
-	o.JXClient, o.Namespace, err = jxclient.LazyCreateJXClientAndNamespace(o.JXClient, o.Namespace)
-	if err != nil {
-		return errors.Wrapf(err, "failed to create jx client")
-	}
 	return nil
 }
 
@@ -89,6 +82,8 @@ func (o *Options) Run() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to validate")
 	}
+
+	o.CommandRunner = cmdrunner.QuietCommandRunner
 
 	dir := o.RepoDir
 	if dir == "" {
@@ -155,7 +150,7 @@ func IsCommitSemantic(commitMessage string) bool {
 
 func (o *Options) git() gitclient.Interface {
 	if o.GitClient == nil {
-		o.GitClient = cli.NewCLIClient("", cmdrunner.QuietCommandRunner)
+		o.GitClient = cli.NewCLIClient("", o.CommandRunner)
 	}
 	return o.GitClient
 }

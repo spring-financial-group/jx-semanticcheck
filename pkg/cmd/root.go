@@ -19,7 +19,7 @@ type Options struct {
 func Main() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   rootcmd.TopLevelCommand,
-		Short: "Command for working with Changelogs",
+		Short: "Command for working with Semantic Commits",
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
 			if err != nil {

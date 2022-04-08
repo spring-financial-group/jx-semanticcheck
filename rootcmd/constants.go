@@ -2,8 +2,8 @@ package rootcmd
 
 var (
 	// TopLevelCommand top level command
-	TopLevelCommand = "jx-changelog"
+	TopLevelCommand = "jx-semanticcheck"
 
 	// BinaryName the name of the command binary in help
-	BinaryName = "jx-changelog"
+	BinaryName = "jx-semanticcheck"
 )
