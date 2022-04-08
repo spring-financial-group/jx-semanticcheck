@@ -1,5 +1,6 @@
-FROM centos:7
+FROM alpine:3.14
+RUN apk upgrade --no-cache
 
-COPY ./build/linux /
+COPY ./build/ /
 
-ENTRYPOINT ["jx-semanticcheck", "version"]
+ENTRYPOINT ["./jx-semanticcheck", "version"]
