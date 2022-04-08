@@ -5,9 +5,9 @@ import (
 	"github.com/jenkins-x/jx-helpers/v3/pkg/options"
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/spf13/cobra"
-	"spring-financial-group/jx-semanticcheck/pkg/cmd/check"
-	"spring-financial-group/jx-semanticcheck/pkg/cmd/version"
-	"spring-financial-group/jx-semanticcheck/rootcmd"
+	"github.com/spring-financial-group/jx-semanticcheck/pkg/cmd/check"
+	"github.com/spring-financial-group/jx-semanticcheck/pkg/cmd/version"
+	"github.com/spring-financial-group/jx-semanticcheck/rootcmd"
 )
 
 // Options a few common options we tend to use in command line tools

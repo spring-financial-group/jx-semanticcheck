@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/spring-financial-group/jx-semanticcheck/cmd/app"
 	"os"
-	"spring-financial-group/jx-semanticcheck/cmd/app"
 )
 
 // Entrypoint for the command
