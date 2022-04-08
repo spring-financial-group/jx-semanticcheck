@@ -2,25 +2,23 @@
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
 
 SHELL := /bin/bash
-NAME := jx-helpers
-BINARY_NAME := jx-alpha-extsecret
+NAME := jx-semanticcheck
+BINARY_NAME := jx-semanticcheck
 BUILD_TARGET = build
 MAIN_SRC_FILE=cmd/main.go
 GO := GO111MODULE=on go
 GO_NOMOD :=GO111MODULE=off go
 REV := $(shell git rev-parse --short HEAD 2> /dev/null || echo 'unknown')
-ORG := jenkins-x
+ORG := jenkins-x-plugins
 ORG_REPO := $(ORG)/$(NAME)
 RELEASE_ORG_REPO := $(ORG_REPO)
 ROOT_PACKAGE := github.com/$(ORG_REPO)
-GO_VERSION := $(shell $(GO) version | sed -e 's/^[^0-9.]*\([0-9.]*\).*/\1/')
-GO_DEPENDENCIES := $(call rwildcard,pkg/,*.go) $(call rwildcard,cmd/j,*.go)
+GO_VERSION := 1.18
+GO_DEPENDENCIES := $(call rwildcard,pkg/,*.go) $(call rwildcard,cmd/,*.go)
 
 BRANCH     := $(shell git rev-parse --abbrev-ref HEAD 2> /dev/null  || echo 'unknown')
 BUILD_DATE := $(shell date +%Y%m%d-%H:%M:%S)
 CGO_ENABLED = 0
-
-#GOPRIVATE := github.com/jenkins-x/jx-api/v4
 
 REPORTS_DIR=$(BUILD_TARGET)/reports
 
@@ -34,11 +32,12 @@ VERSION ?= $(shell echo "$$(git for-each-ref refs/tags/ --count=1 --sort=-versio
 
 # Full build flags used when building binaries. Not used for test compilation/execution.
 BUILDFLAGS :=  -ldflags \
-  " -X $(ROOT_PACKAGE)/pkg/version.Version=$(VERSION)\
-		-X $(ROOT_PACKAGE)/pkg/version.Revision='$(REV)'\
-		-X $(ROOT_PACKAGE)/pkg/version.Branch='$(BRANCH)'\
-		-X $(ROOT_PACKAGE)/pkg/version.BuildDate='$(BUILD_DATE)'\
-		-X $(ROOT_PACKAGE)/pkg/version.GoVersion='$(GO_VERSION)'\
+  " -X $(ROOT_PACKAGE)/pkg/cmd/version.Version=$(VERSION)\
+		-X github.com/spring-financial-group/jx-semanticcheck/pkg/cmd/version.Version=$(VERSION)\
+		-X $(ROOT_PACKAGE)/pkg/cmd/version.Revision='$(REV)'\
+		-X $(ROOT_PACKAGE)/pkg/cmd/version.Branch='$(BRANCH)'\
+		-X $(ROOT_PACKAGE)/pkg/cmd/version.BuildDate='$(BUILD_DATE)'\
+		-X $(ROOT_PACKAGE)/pkg/cmd/version.GoVersion='$(GO_VERSION)'\
 		$(BUILD_TIME_CONFIG_FLAGS)"
 
 # Some tests expect default values for version.*, so just use the config package values there.
@@ -82,7 +81,8 @@ get-test-deps: ## Install test dependencies
 print-version: ## Print version
 	@echo $(VERSION)
 
-build: $(GO_DEPENDENCIES) clean test
+build: $(GO_DEPENDENCIES) clean ## Build jx-semanticcheck binary for current OS
+	CGO_ENABLED=$(CGO_ENABLED) $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/$(BINARY_NAME) $(MAIN_SRC_FILE)
 
 build-all: $(GO_DEPENDENCIES) build make-reports-dir ## Build all files - runtime, all tests etc.
 	CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) -run=nope -tags=integration -failfast -short ./... $(BUILDFLAGS)
@@ -97,7 +97,7 @@ make-reports-dir:
 	mkdir -p $(REPORTS_DIR)
 
 test: ## Run tests with the "unit" build tag
-	KUBECONFIG=/cluster/connections/not/allowed CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) --tags="integration unit" -failfast -short ./... $(TEST_BUILDFLAGS)
+	KUBECONFIG=/cluster/connections/not/allowed CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) --tags=unit -failfast -short ./... $(TEST_BUILDFLAGS)
 
 test-coverage : make-reports-dir ## Run tests and coverage for all tests with the "unit" build tag
 	CGO_ENABLED=$(CGO_ENABLED) $(GOTEST) --tags=unit $(COVERFLAGS) -failfast -short ./... $(TEST_BUILDFLAGS)
@@ -111,9 +111,7 @@ test-report-html: make-reports-dir get-test-deps test-coverage ## Create the tes
 install: $(GO_DEPENDENCIES) ## Install the binary
 	GOBIN=${GOPATH}/bin $(GO) install $(BUILDFLAGS) $(MAIN_SRC_FILE)
 
-linux: build
-
-old-linux: ## Build for Linux
+linux: ## Build for Linux
 	CGO_ENABLED=$(CGO_ENABLED) GOOS=linux GOARCH=amd64 $(GO) $(BUILD_TARGET) $(BUILDFLAGS) -o build/linux/$(BINARY_NAME) $(MAIN_SRC_FILE)
 	chmod +x build/linux/$(BINARY_NAME)
 
@@ -129,12 +127,9 @@ darwin: ## Build for OSX
 	chmod +x build/darwin/$(BINARY_NAME)
 
 .PHONY: release
-release: clean linux test promoter
+release: clean linux test
 
 release-all: release linux win darwin
-
-promoter:
-	cd promote && go build main.go
 
 .PHONY: goreleaser
 goreleaser:
@@ -169,14 +164,53 @@ lint: ## Lint the code
 	./hack/generate.sh
 
 .PHONY: all
-all: fmt build lint test
+all: fmt build test lint
+
+verify-code-unchanged: ## Verify the generated/formatting of code is up to date
+	$(eval CHANGED = $(shell git ls-files --modified --others --exclude-standard))
+	@if [ "$(CHANGED)" == "" ]; \
+      	then \
+      	    echo "All generated and formatted files up to date"; \
+      	else \
+      		echo "Code generation and/or formatting is out of date"; \
+      		echo "$(CHANGED)"; \
+			git diff; \
+      		exit 1; \
+      	fi
+
+crd-manifests: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) crd:maxDescLen=0 paths="./pkg/apis/preview/v1alpha1/..." output:crd:artifacts:config=crds
+
+.PHONY: docs
+docs: cli-docs crds-docs
+
+DOCS_GEN := bin/gen-docs
+$(DOCS_GEN):
+	$(GO) build -o bin/gen-docs ./hack/struct-docs.go
+
+	pushd /tmp; $(GO) get -u sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.0; popd
+
+.PHONY: crds-docs
+crds-docs: $(DOCS_GEN)
+	rm -rf ./docs/crds
+	$(DOCS_GEN) --input=./pkg/apis/preview/v1alpha1/... --root=Preview --output=./docs/crds
 
 bin/docs:
 	go build $(LDFLAGS) -v -o bin/docs cmd/docs/*.go
 
-.PHONY: docs
-docs: bin/docs ## update docs
+.PHONY: cli-docs
+cli-docs: bin/docs ## update docs
 	@echo "Generating docs"
 	@./bin/docs --target=./docs/cmd
 	@./bin/docs --target=./docs/man/man1 --kind=man
 	@rm -f ./bin/docs
+
+
+.PHONY: code-generate
+code-generate:
+	./hack/generate.sh
+
+.PHONY: gen-schema
+gen-schema:
+	mkdir -p schema
+	go run cmd/schemagen/main.go
