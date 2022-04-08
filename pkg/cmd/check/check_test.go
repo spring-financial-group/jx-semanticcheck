@@ -1,37 +1,9 @@
-//go:build unit
-// +build unit
-
 package check
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"spring-financial-group/jx-semanticcheck/internal/domain/mocks"
 	"testing"
 )
-
-func TestGetPreviousRevision_FirstRelease(t *testing.T) {
-	mockGitClient := new(mocks.Interface)
-	mockGitClient.On("Command", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("FirstCommitSHA", nil)
-	t.Run("First Release", func(t *testing.T) {
-		actualRevision, err := GetPreviousRevSha(mockGitClient, "")
-		assert.NoError(t, err)
-		assert.Equal(t, "FirstCommitSHA", actualRevision)
-	})
-}
-
-func TestGetPreviousRevision_NthRelease(t *testing.T) {
-	actualRevSHA := "SHA2"
-	mockGitClient := new(mocks.Interface)
-	mockGitClient.On("Command", mock.Anything, "for-each-ref", "--sort=-creatordate", "--format=%(objectname)%00%(refname:short)", "--count=2", "refs/tags").Return(fmt.Sprintf("Tag1\x00SHA1\nTag2\x00%s", actualRevSHA), nil)
-	mockGitClient.On("Command", mock.Anything, "rev-list", "-n", "1", "Tag2").Return(actualRevSHA, nil)
-	t.Run("Nth Release", func(t *testing.T) {
-		actualRevision, err := GetPreviousRevSha(mockGitClient, "")
-		assert.NoError(t, err)
-		assert.Equal(t, "SHA2", actualRevision)
-	})
-}
 
 func TestIsCommitSemantic(t *testing.T) {
 	testCases := []struct {

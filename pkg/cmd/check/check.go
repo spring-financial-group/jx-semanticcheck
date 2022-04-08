@@ -15,7 +15,6 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"spring-financial-group/jx-semanticcheck/pkg/gits"
 	"strings"
 )
 
@@ -28,17 +27,19 @@ type Options struct {
 	CommandRunner cmdrunner.CommandRunner
 	JXClient      jxc.Interface
 
-	Namespace           string
-	LatestCommitSha     string
-	PreviousRevisionSha string
-	RepoDir             string
+	Namespace       string
+	LatestCommitSha string
+	CurrentRevSha   string
+	RepoDir         string
 }
 
 var (
 	cmdLong = templates.LongDesc(`
+		Checks whether the commit messages in a pull request follow Conventional Commits.
 `)
 
 	cmdExample = templates.Examples(`
+		jx-semanticcheck check 
 `)
 
 	ConventionalCommitTitles = []string{"feat", "fix", "perf", "refactor", "docs", "test", "revert", "style", "chore"}
@@ -58,8 +59,8 @@ func NewCmdCheckSemantics() (*cobra.Command, *Options) {
 		},
 	}
 	o.ScmFactory.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.PreviousRevisionSha, "previous-rev", "p", "", "the previous tag revision")
-	cmd.Flags().StringVarP(&o.LatestCommitSha, "latest-sha", "", "", "the current tag revision")
+	cmd.Flags().StringVarP(&o.CurrentRevSha, "previous-rev", "p", "", "the first commit SHA of this revision")
+	cmd.Flags().StringVarP(&o.LatestCommitSha, "latest-sha", "", "", "the latest commit SHA")
 	cmd.Flags().StringVarP(&o.RepoDir, "repo-dir", "", "", "the directory of the git repository")
 
 	return cmd, o
@@ -94,8 +95,8 @@ func (o *Options) Run() error {
 		dir = o.ScmFactory.Dir
 	}
 
-	if o.PreviousRevisionSha == "" {
-		o.PreviousRevisionSha, err = GetPreviousRevSha(o.git(), dir)
+	if o.CurrentRevSha == "" {
+		o.CurrentRevSha, _, err = gitclient.GetCommitPointedToByLatestTag(o.git(), dir)
 		if err != nil {
 			return err
 		}
@@ -108,7 +109,7 @@ func (o *Options) Run() error {
 		}
 	}
 
-	commits, err := chgit.FetchCommits(dir, o.PreviousRevisionSha, o.LatestCommitSha)
+	commits, err := chgit.FetchCommits(dir, o.CurrentRevSha, o.LatestCommitSha)
 	if err != nil {
 		return err
 	}
@@ -122,7 +123,10 @@ func (o *Options) Run() error {
 	var semanticCounter int
 	for _, commit := range commitSlice {
 		if !IsCommitSemantic(commit.Message) {
-			log.Logger().Infof("commit %s does not use Conventional Commits:\n%s\n", commit.Hash, commit.Message)
+			log.Logger().Infof("---  Commit | %s ---\n"+
+				"This commit message did not follow Conventional Commits:\n"+
+				"%s",
+				commit.Hash, commit.Message)
 			semanticCounter++
 		}
 	}
@@ -133,24 +137,8 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func GetPreviousRevSha(g gitclient.Interface, dir string) (string, error) {
-	previousRevSha, _, err := gits.GetCommitPointedToByPreviousTag(g, dir)
-	if err != nil {
-		return "", err
-	}
-	if previousRevSha == "" {
-		// let's assume we are the first release
-		previousRevSha, err = gits.GetFirstCommitSha(g, dir)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to find first commit after we found no previous releases")
-		}
-		if previousRevSha == "" {
-			return "", errors.Errorf("no previous commit version found so change diff unavailable")
-		}
-	}
-	return previousRevSha, nil
-}
-
+// IsCommitSemantic checks whether the commit message follow the conventions set out in
+// Conventional Commits
 func IsCommitSemantic(commitMessage string) bool {
 	commitMessage = strings.TrimSpace(strings.ToLower(commitMessage))
 	idx := strings.Index(commitMessage, ":")
