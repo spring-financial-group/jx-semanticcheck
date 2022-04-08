@@ -7,7 +7,7 @@ import (
 	"os"
 	"syscall"
 
-	"spring-financial-group/jx-semanticcheck/pkg/cmd"
+	"github.com/spring-financial-group/jx-semanticcheck/pkg/cmd"
 )
 
 // Run runs the command, if args are not nil they will be set on the command
