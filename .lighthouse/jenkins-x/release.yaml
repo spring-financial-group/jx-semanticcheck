@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  creationTimestamp: null
+  name: release
+spec:
+  pipelineSpec:
+    tasks:
+      - name: from-build-pack
+        resources: {}
+        taskSpec:
+          metadata: {}
+          stepTemplate:
+            image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/release.yaml@versionStream
+            name: ""
+            resources:
+              requests:
+                cpu: 400m
+                memory: 600Mi
+            workingDir: /workspace/source
+          steps:
+            - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
+              name: ""
+              resources: {}
+            - name: next-version
+              resources: {}
+            - name: jx-variables
+              resources: {}
+            - image: golang:1.18
+              name: build-make-build
+              resources: {}
+              script: |
+                #!/bin/sh
+                make build
+            - name: check-registry
+              resources: {}
+            - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push.yaml@main
+              name: ""
+              resources: {}
+            - name: promote-changelog
+              resources: {}
+            - name: promote-jx-promote
+              resources: {}
+  podTemplate: {}
+  serviceAccountName: tekton-bot
+  timeout: 1h0m0s
+status: {}
