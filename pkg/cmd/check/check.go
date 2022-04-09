@@ -56,7 +56,7 @@ func NewCmdCheckSemantics() (*cobra.Command, *Options) {
 		},
 	}
 	o.ScmFactory.DiscoverFromGit = true
-	cmd.Flags().StringVarP(&o.CurrentRevSha, "previous-rev", "p", "", "the first commit SHA of this revision")
+	cmd.Flags().StringVarP(&o.CurrentRevSha, "first-sha", "p", "", "the first commit SHA of this revision")
 	cmd.Flags().StringVarP(&o.LatestCommitSha, "latest-sha", "", "", "the latest commit SHA")
 	cmd.Flags().StringVarP(&o.RepoDir, "repo-dir", "", "", "the directory of the git repository")
 
@@ -115,7 +115,7 @@ func (o *Options) Run() error {
 		commitSlice = commitSlice[1:]
 	}
 
-	var errCount int
+	var failedCommitCount int
 	for _, commit := range commitSlice {
 		var terminalMessage string
 		passMark := "✓"
@@ -123,7 +123,7 @@ func (o *Options) Run() error {
 		if !IsCommitSemantic(commit.Message) {
 			passMark = "x"
 			terminalMessage = commit.Message
-			errCount++
+			failedCommitCount++
 		}
 
 		log.Logger().Infof("---  Commit | %s --- %s\n"+
@@ -131,11 +131,10 @@ func (o *Options) Run() error {
 			commit.Hash, passMark, terminalMessage)
 	}
 
-	if errCount > 0 {
-		return fmt.Errorf("%d commit(s) did not follow https://conventionalcommits.org/, please rebase and merge", errCount)
+	if failedCommitCount > 0 {
+		return fmt.Errorf("%d commit(s) did not follow https://conventionalcommits.org/, please rebase and merge", failedCommitCount)
 	}
-
-	log.Logger().Infof("All commits follow Conventional Commits")
+	log.Logger().Infof("\nAll commits follow Conventional Commits")
 	return nil
 }
 
