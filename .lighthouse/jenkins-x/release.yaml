@@ -39,8 +39,6 @@ spec:
               resources: {}
             - name: promote-changelog
               resources: {}
-            - name: promote-jx-promote
-              resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
   timeout: 1h0m0s
