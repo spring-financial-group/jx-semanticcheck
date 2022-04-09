@@ -115,20 +115,27 @@ func (o *Options) Run() error {
 		commitSlice = commitSlice[1:]
 	}
 
-	var semanticCounter int
+	var errCount int
 	for _, commit := range commitSlice {
+		var terminalMessage string
+		passMark := "✓"
+
 		if !IsCommitSemantic(commit.Message) {
-			log.Logger().Infof("---  Commit | %s ---\n"+
-				"This commit message did not follow Conventional Commits:\n"+
-				"%s",
-				commit.Hash, commit.Message)
-			semanticCounter++
+			passMark = "x"
+			terminalMessage = commit.Message
+			errCount++
 		}
+
+		log.Logger().Infof("---  Commit | %s --- %s\n"+
+			"%s",
+			commit.Hash, passMark, terminalMessage)
 	}
-	if semanticCounter > 0 {
-		return fmt.Errorf("%d commit(s) did not follow Conventional Commits, please rebase and merge", semanticCounter)
+
+	if errCount > 0 {
+		return fmt.Errorf("%d commit(s) did not follow https://conventionalcommits.org/, please rebase and merge", errCount)
 	}
-	log.Logger().Infof("all commits follow Conventional Commits")
+
+	log.Logger().Infof("All commits follow Conventional Commits")
 	return nil
 }
 
