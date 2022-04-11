@@ -132,9 +132,9 @@ func (o *Options) Run() error {
 	}
 
 	if failedCommitCount > 0 {
-		return fmt.Errorf("%d commit(s) did not follow https://conventionalcommits.org/, please rebase and merge", failedCommitCount)
+		return fmt.Errorf("%d commit(s) did not follow https://conventionalcommits.org/", failedCommitCount)
 	}
-	log.Logger().Infof("\nAll commits follow Conventional Commits")
+	log.Logger().Infof("\nAll commits follow https://conventionalcommits.org/")
 	return nil
 }
 
