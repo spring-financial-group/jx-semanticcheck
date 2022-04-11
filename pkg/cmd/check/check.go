@@ -142,6 +142,7 @@ func (o *Options) Run() error {
 // Conventional Commits
 func IsCommitSemantic(commitMessage string) bool {
 	commitMessage = strings.TrimSpace(strings.ToLower(commitMessage))
+
 	idx := strings.Index(commitMessage, ":")
 	if idx > 0 {
 		commitTitle := commitMessage[0:idx]
@@ -150,6 +151,11 @@ func IsCommitSemantic(commitMessage string) bool {
 				return true
 			}
 		}
+	}
+
+	// Check that the commit isn't a revert or merge
+	if strings.Contains(commitMessage, "revert") || strings.Contains(commitMessage, "merge") {
+		return true
 	}
 	return false
 }

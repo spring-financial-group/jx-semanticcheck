@@ -61,6 +61,16 @@ func TestIsCommitSemantic(t *testing.T) {
 			commitMessage:  "docs(README): improve readability",
 			expectedResult: true,
 		},
+		{
+			name:           "merge",
+			commitMessage:  "Merge pull request #287",
+			expectedResult: true,
+		},
+		{
+			name:           "revert",
+			commitMessage:  "Revert 'feat: added date offset so that we can",
+			expectedResult: true,
+		},
 	}
 
 	for _, tt := range testCases {
