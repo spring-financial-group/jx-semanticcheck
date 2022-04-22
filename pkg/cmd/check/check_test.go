@@ -71,6 +71,11 @@ func TestIsCommitSemantic(t *testing.T) {
 			commitMessage:  "Revert 'feat: added date offset so that we can",
 			expectedResult: true,
 		},
+		{
+			name:           "build",
+			commitMessage:  "build: stuff",
+			expectedResult: true,
+		},
 	}
 
 	for _, tt := range testCases {

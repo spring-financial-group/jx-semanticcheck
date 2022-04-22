@@ -39,7 +39,7 @@ var (
 		jx-semanticcheck check 
 `)
 
-	ConventionalCommitTitles = []string{"feat", "fix", "perf", "refactor", "docs", "test", "revert", "style", "chore"}
+	ConventionalCommitTitles = []string{"feat", "fix", "perf", "refactor", "docs", "test", "revert", "style", "chore", "build"}
 )
 
 func NewCmdCheckSemantics() (*cobra.Command, *Options) {
