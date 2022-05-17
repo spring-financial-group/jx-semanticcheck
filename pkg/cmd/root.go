@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spring-financial-group/jx-semanticcheck/pkg/cmd/check"
 	"github.com/spring-financial-group/jx-semanticcheck/pkg/cmd/version"
-	"github.com/spring-financial-group/jx-semanticcheck/rootcmd"
+	"github.com/spring-financial-group/jx-semanticcheck/pkg/rootcmd"
 )
 
 // Options a few common options we tend to use in command line tools
