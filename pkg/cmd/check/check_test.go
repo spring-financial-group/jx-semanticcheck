@@ -57,7 +57,7 @@ func TestIsCommitSemantic(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name:           "with feature",
+			name:           "with scope",
 			commitMessage:  "docs(README): improve readability",
 			expectedResult: true,
 		},
@@ -69,6 +69,11 @@ func TestIsCommitSemantic(t *testing.T) {
 		{
 			name:           "revert",
 			commitMessage:  "Revert 'feat: added date offset so that we can",
+			expectedResult: true,
+		},
+		{
+			name:           "build",
+			commitMessage:  "build: the service binaries",
 			expectedResult: true,
 		},
 	}

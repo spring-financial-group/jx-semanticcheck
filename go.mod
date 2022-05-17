@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/antham/chyle v1.14.0
-	github.com/jenkins-x/jx-api/v4 v4.3.3
 	github.com/jenkins-x/jx-helpers/v3 v3.2.4
 	github.com/jenkins-x/jx-logging/v3 v3.0.6
 	github.com/pkg/errors v0.9.1
@@ -45,6 +44,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jenkins-x/go-scm v1.10.10 // indirect
+	github.com/jenkins-x/jx-api/v4 v4.3.3 // indirect
 	github.com/jenkins-x/jx-kube-client/v3 v3.0.2 // indirect
 	github.com/jenkins-x/logrus-stackdriver-formatter v0.2.3 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
