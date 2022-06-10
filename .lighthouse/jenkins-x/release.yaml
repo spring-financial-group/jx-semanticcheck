@@ -6,15 +6,14 @@ metadata:
 spec:
   pipelineSpec:
     tasks:
-      - name: from-build-pack
+      - name: chart
         resources: {}
         taskSpec:
           metadata: {}
           stepTemplate:
-            image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go/release.yaml@versionStream
+            image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-plugin/release.yaml@versionStream
             name: ""
-            resources:
-              limits: {}
+            resources: {}
             workingDir: /workspace/source
           steps:
             - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone.yaml@versionStream
@@ -23,21 +22,20 @@ spec:
             - name: next-version
               resources: {}
             - name: jx-variables
+            - name: release-binary
               resources: {}
-            - image: golang:1.18
-              name: build-make-build
+            - name: build-and-push-image
               resources: {}
-              script: |
-                #!/bin/sh
-                make build
-            - name: check-registry
+            - name: chart-docs
               resources: {}
-            - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push.yaml@main
-              name: ""
+            - name: release-chart
+            - name: changelog
               resources: {}
-            - name: promote-changelog
+            - name: upload-binaries
+              resources: {}
+            - name: promote-release
               resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
-  timeout: 1h0m0s
+  timeout: 1h30m
 status: {}

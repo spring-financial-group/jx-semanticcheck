@@ -6,32 +6,27 @@ metadata:
 spec:
   pipelineSpec:
     tasks:
-    - name: from-build-pack
-      resources: {}
-      taskSpec:
-        metadata: {}
-        stepTemplate:
-          image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-cli/pullrequest.yaml@versionStream
-          name: ""
-          resources:
-            # override limits for all containers here
-            limits: {}
-          workingDir: /workspace/source
-        steps:
-        - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
-          name: ""
-          resources: {}
-        - name: jx-variables
-          resources:
-            # override requests for the pod here
-            requests:
-              cpu: 400m
-              memory: 600Mi
-        - name: build-make-linux
-          resources: {}
-        - name: build-make-test
-          resources: {}
+      - name: from-build-pack
+        resources: {}
+        taskSpec:
+          metadata: {}
+          stepTemplate:
+            image: uses:jenkins-x/jx3-pipeline-catalog/tasks/go-plugin/pullrequest.yaml@versionStream
+            name: ""
+            resources: {}
+            workingDir: /workspace/source
+          steps:
+            - image: uses:jenkins-x/jx3-pipeline-catalog/tasks/git-clone/git-clone-pr.yaml@versionStream
+              name: ""
+              resources: {}
+            - name: jx-variables
+            - name: build-make-linux
+              resources: {}
+            - name: build-make-test
+              resources: {}
+            - name: build-container-build
+              resources: {}
   podTemplate: {}
   serviceAccountName: tekton-bot
-  timeout: 240h0m0s
+  timeout: 1h0m0s
 status: {}
