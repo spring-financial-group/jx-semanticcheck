@@ -57,7 +57,7 @@ func TestIsCommitSemantic(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name:           "with feature",
+			name:           "with scope",
 			commitMessage:  "docs(README): improve readability",
 			expectedResult: true,
 		},
@@ -71,11 +71,16 @@ func TestIsCommitSemantic(t *testing.T) {
 			commitMessage:  "Revert 'feat: added date offset so that we can",
 			expectedResult: true,
 		},
+		{
+			name:           "build",
+			commitMessage:  "build: the service binaries",
+			expectedResult: true,
+		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			actualResult := IsCommitSemantic(tt.commitMessage)
+			actualResult := IsCommitConventional(tt.commitMessage)
 			assert.Equal(t, tt.expectedResult, actualResult)
 		})
 	}
