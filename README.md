@@ -8,3 +8,4 @@
 
 Designed to be used in conjunction with the semantic versioning of [Jenkins X Release Version](https://github.com/jenkins-x-plugins/jx-release-version)
 to provide meaningful and consistent releases across all services.
+
