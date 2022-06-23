@@ -2,7 +2,6 @@ package check
 
 import (
 	"fmt"
-	chgit "github.com/antham/chyle/chyle/git"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cmdrunner"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/helper"
 	"github.com/jenkins-x/jx-helpers/v3/pkg/cobras/templates"
@@ -13,7 +12,7 @@ import (
 	"github.com/jenkins-x/jx-logging/v3/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"github.com/spring-financial-group/jx-semanticcheck/pkg/helpers"
 	"strings"
 )
 
@@ -69,18 +68,13 @@ func (o *Options) Run() error {
 		return errors.Wrapf(err, "failed to validate")
 	}
 
-	commits, err := o.GetCurrentRevCommits()
+	commits, err := helpers.GetNewCommits(o.GitClient, o.dir)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get commits")
 	}
 
-	if strings.HasPrefix((*commits)[0].Message, "release ") {
-		// Ignore release commit
-		*commits = (*commits)[1:]
-	}
-
 	var failedCommits int
-	for _, commit := range *commits {
+	for _, commit := range commits {
 		var terminalMessage string
 		indicator := "✓"
 
@@ -90,9 +84,9 @@ func (o *Options) Run() error {
 			failedCommits++
 		}
 
-		log.Logger().Infof("---  Commit | %s --- %s\n"+
+		log.Logger().Infof("---  %s | %s --- %s\n"+
 			"%s",
-			commit.Hash, indicator, terminalMessage)
+			commit.SHA, commit.Date, indicator, terminalMessage)
 	}
 
 	if failedCommits > 0 {
@@ -123,24 +117,6 @@ func (o *Options) Validate() error {
 		o.GitClient = cli.NewCLIClient("", o.CommandRunner)
 	}
 	return nil
-}
-
-// GetCurrentRevCommits returns the commits since the last revision
-func (o *Options) GetCurrentRevCommits() (commits *[]object.Commit, err error) {
-	if o.firstSha == "" {
-		o.firstSha, _, err = gitclient.GetCommitPointedToByLatestTag(o.GitClient, o.dir)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if o.latestSha == "" {
-		o.latestSha, err = gitclient.GetLatestCommitSha(o.GitClient, o.dir)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return chgit.FetchCommits(o.dir, o.firstSha, o.latestSha)
 }
 
 // IsCommitConventional checks whether a commit message follows the conventions by comparing its prefix
