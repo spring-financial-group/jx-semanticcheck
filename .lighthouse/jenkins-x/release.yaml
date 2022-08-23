@@ -1,7 +1,6 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
-metadata:
-  creationTimestamp: null
+metadata: # kpt-merge: /release
   name: release
 spec:
   pipelineSpec:

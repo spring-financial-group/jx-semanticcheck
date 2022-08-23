@@ -1,6 +1,6 @@
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
-metadata:
+metadata: # kpt-merge: /commits-semantics-check
   creationTimestamp: null
   name: commits-semantics-check
 spec:
