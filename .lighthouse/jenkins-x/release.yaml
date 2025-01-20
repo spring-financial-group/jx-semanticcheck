@@ -32,7 +32,7 @@ spec:
                 make build
             - name: check-registry
               resources: {}
-            - image: uses:spring-financial-group/DevOps/pipelines/build-scan-push.yaml@main
+            - image: uses:spring-financial-group/mqube-pipeline-catalog/tasks/build-scan-push/build-scan-push.yaml@main
               name: ""
               resources: {}
             - name: promote-changelog
